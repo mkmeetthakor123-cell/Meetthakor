@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Dash Game - MeetThaakor</title>
+
+<style>
+body {
+  margin: 0;
+  overflow: hidden;
+  background: linear-gradient(135deg, #ff2f92, #ff6fbf);
+  font-family: Arial;
+}
+
+canvas {
+  display: block;
+}
+
+#bar {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 90%;
+  height: 18px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 10px;
+}
+
+#fill {
+  height: 100%;
+  width: 0%;
+  background: white;
+  border-radius: 10px;
+}
+
+#text {
+  position: absolute;
+  top: 35px;
+  left: 10px;
+  color: white;
+  font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+<div id="bar"><div id="fill"></div></div>
+<div id="text">0%</div>
+
+<canvas id="game"></canvas>
+
+<!-- 🎵 AUDIO -->
+<audio id="bgMusic" loop>
+  <source src="https://cdn.pixabay.com/audio/2022/03/15/audio_115b9b3c6f.mp3">
+</audio>
+
+<audio id="jumpSound">
+  <source src="https://cdn.pixabay.com/audio/2022/03/15/audio_c8c8a73467.mp3">
+</audio>
+
+<audio id="deathSound">
+  <source src="https://cdn.pixabay.com/audio/2022/03/15/audio_4c0c4c7d2c.mp3">
+</audio>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+canvas.width = innerWidth;
+canvas.height = innerHeight;
+
+// Audio
+const bgMusic = document.getElementById("bgMusic");
+const jumpSound = document.getElementById("jumpSound");
+const deathSound = document.getElementById("deathSound");
+
+let gravity = 0.6;
+let speed = 6;
+let progress = 0;
+let started = false;
+
+let player = {
+  x: 120,
+  y: canvas.height - 150,
+  size: 35,
+  dy: 0,
+  jump: false
+};
+
+let obstacles = [];
+
+// Start music on first touch/click
+function startGame() {
+  if (!started) {
+    bgMusic.volume = 0.5;
+    bgMusic.play();
+    started = true;
+  }
+}
+
+document.addEventListener("keydown", e => {
+  startGame();
+  if (e.code === "Space" && !player.jump) {
+    player.dy = -12;
+    player.jump = true;
+    jumpSound.currentTime = 0;
+    jumpSound.play();
+  }
+});
+
+document.addEventListener("touchstart", () => {
+  startGame();
+  if (!player.jump) {
+    player.dy = -12;
+    player.jump = true;
+    jumpSound.currentTime = 0;
+    jumpSound.play();
+  }
+});
+
+// Spawn spikes
+setInterval(() => {
+  obstacles.push({
+    x: canvas.width,
+    y: canvas.height - 100,
+    size: 35
+  });
+}, 1300);
+
+// Draw player
+function drawPlayer() {
+  ctx.fillStyle = "white";
+  ctx.shadowColor = "#fff";
+  ctx.shadowBlur = 15;
+  ctx.fillRect(player.x, player.y, player.size, player.size);
+  ctx.shadowBlur = 0;
+}
+
+// Draw spike
+function drawSpike(o) {
+  ctx.fillStyle = "#111";
+  ctx.beginPath();
+  ctx.moveTo(o.x, o.y + o.size);
+  ctx.lineTo(o.x + o.size/2, o.y);
+  ctx.lineTo(o.x + o.size, o.y + o.size);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// Ground with slope
+function drawGround() {
+  ctx.strokeStyle = "white";
+  ctx.lineWidth = 4;
+
+  let base = canvas.height - 80;
+
+  ctx.beginPath();
+  ctx.moveTo(0, base);
+  ctx.lineTo(200, base);
+  ctx.lineTo(300, base - 50);
+  ctx.lineTo(500, base - 50);
+  ctx.lineTo(600, base);
+  ctx.lineTo(canvas.width, base);
+  ctx.stroke();
+}
+
+// Game loop
+function update() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  drawGround();
+
+  // Player physics
+  player.y += player.dy;
+  player.dy += gravity;
+
+  if (player.y >= canvas.height - 150) {
+    player.y = canvas.height - 150;
+    player.jump = false;
+  }
+
+  drawPlayer();
+
+  // Obstacles
+  for (let i = 0; i < obstacles.length; i++) {
+    let o = obstacles[i];
+    o.x -= speed;
+
+    drawSpike(o);
+
+    // Collision
+    if (
+      player.x < o.x + o.size &&
+      player.x + player.size > o.x &&
+      player.y < o.y + o.size &&
+      player.y + player.size > o.y
+    ) {
+      bgMusic.pause();
+      deathSound.play();
+      setTimeout(() => {
+        alert("Game Over!");
+        location.reload();
+      }, 200);
+    }
+  }
+
+  // Progress
+  progress += 0.05;
+  if (progress > 100) progress = 100;
+
+  document.getElementById("fill").style.width = progress + "%";
+  document.getElementById("text").innerText = Math.floor(progress) + "%";
+
+  requestAnimationFrame(update);
+}
+
+update();
+</script>
+
+</body>
+</html>
